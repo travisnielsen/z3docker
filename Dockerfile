@@ -1,40 +1,29 @@
-FROM ubuntu:xenial
+FROM microsoft/dotnet:2.2-runtime-stretch-slim AS base
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget \
-    unzip \
-    procps \ 
-    sudo \
-    liblttng-ust0 \
-    libcurl3 \
-    libssl1.0.0 \
-    libkrb5-3 \
-    zlib1g \
-    libicu55 \
-    nano \
-    apt-transport-https \
-    ca-certificates \
-    apt-utils && \
+    apt-get install -y --no-install-recommends unzip procps libgomp1 sudo && \
     rm -rf /var/lib/apt/lists/*
 
-# Create `user` user for container with password `user`.  and give it
-# password-less sudo access
+# Create `user` user for container with password `user` and give it password-less sudo access
 RUN useradd -m user && \
     echo user:user | chpasswd && \
     cp /etc/sudoers /etc/sudoers.bak && \
     echo 'user  ALL=(root) NOPASSWD: ALL' >> /etc/sudoers
 USER user
 
-WORKDIR /home/user
+# Add VS Debugger
+RUN curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l ~/vsdbg
 
-# Download and install the .Net SDK
-RUN wget --no-check-certificate https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && \ 
-    sudo dpkg -i packages-microsoft-prod.deb
-RUN sudo apt-get update && sudo apt-get install -y dotnet-sdk-2.2
+FROM microsoft/dotnet:2.2-sdk AS build-env
+WORKDIR /app
+COPY . ./
+RUN dotnet restore
+RUN dotnet publish -c Debug -o out
 
-COPY . /home/user
-RUN sudo dotnet restore
-RUN sudo dotnet publish -c Debug -o out
+FROM base
+WORKDIR /app
+COPY --from=build-env /app/out ./
+RUN sudo cp /app/runtimes/debian.8-x64/native/libz3.so /lib/x86_64-linux-gnu
 
-# ENTRYPOINT ["dotnet", "z3core.dll"]
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["dotnet", "z3core.dll"]
+# ENTRYPOINT ["tail", "-f", "/dev/null"]
