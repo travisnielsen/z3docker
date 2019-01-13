@@ -7,9 +7,8 @@ docker build -t z3demo .
 docker run -d z3demo
 ```
 
-Get the ID of the container from the response and attach to it via:
+Get the ID of the container from the response and view the logs:
 
 ```
-docker exec -it <container_id> "/bin/bash"
+docker logs <container_id>
 ```
-When inside the container, you have the ability to execute the code via dotnet CLI comamnds.
