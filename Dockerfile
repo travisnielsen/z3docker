@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.2-runtime-stretch-slim AS base
+FROM microsoft/dotnet:2.2-runtime-stretch-slim AS run-env
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends unzip procps libgomp1 && \
@@ -16,7 +16,7 @@ COPY . ./
 RUN dotnet restore
 RUN dotnet publish -c Debug -o out
 
-FROM base
+FROM run-env
 WORKDIR /app
 COPY --from=build-env /app/out ./
 
